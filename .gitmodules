@@ -1,0 +1,3 @@
+[submodule "code-vibes"]
+	path = code-vibes
+	url = https://github.com/C21-501/code-vibes.git

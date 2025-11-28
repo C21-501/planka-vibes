@@ -1,0 +1,154 @@
+# Code-Vibes RFC + Planka Integration
+# Full stack deployment for RFC workflow management
+
+services:
+  # ==================== CODE-VIBES SERVICES ====================
+  
+  code-vibes-backend:
+    build:
+      context: ./code-vibes/backend/rfc-service
+      dockerfile: Dockerfile
+    restart: on-failure
+    ports:
+      - "8080:8080"
+    environment:
+      # Database
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://code-vibes-db:5432/cab_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+
+      # Keycloak
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/cab-realm
+      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
+
+      # Security
+      - APP_SECURITY_ENABLED=${APP_SECURITY_ENABLED:-false}
+
+      # Planka Integration
+      - PLANKA_ENABLED=true
+      - PLANKA_URL=http://planka:1337
+      - PLANKA_API_TOKEN=${PLANKA_API_TOKEN:-}
+      - PLANKA_WEBHOOK_SECRET=${RFC_WEBHOOK_SECRET:-rfc-webhook-secret-key}
+      - PLANKA_PROJECT_ID=${PLANKA_PROJECT_ID:-}
+      - PLANKA_BOARD_ID=${PLANKA_BOARD_ID:-}
+      - PLANKA_AUTO_SYNC=true
+    depends_on:
+      code-vibes-db:
+        condition: service_healthy
+    networks:
+      - code-vibes-net
+      - integration-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  code-vibes-db:
+    image: postgres:16-alpine
+    restart: on-failure
+    volumes:
+      - code-vibes-db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=cab_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cab_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - code-vibes-net
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.0
+    restart: on-failure
+    command: start-dev --import-realm
+    ports:
+      - "8081:8080"
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_HEALTH_ENABLED=true
+    volumes:
+      - ./code-vibes/backend/rfc-service/src/main/resources/keycloak:/opt/keycloak/data/import:ro
+    networks:
+      - code-vibes-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ==================== PLANKA SERVICES ====================
+  
+  planka:
+    build:
+      context: ./planka
+      dockerfile: Dockerfile
+    restart: on-failure
+    ports:
+      - "3000:1337"
+    volumes:
+      - planka-favicons:/app/public/favicons
+      - planka-user-avatars:/app/public/user-avatars
+      - planka-background-images:/app/public/background-images
+      - planka-attachments:/app/private/attachments
+    environment:
+      - BASE_URL=http://localhost:3000
+      - DATABASE_URL=postgresql://postgres@planka-db/planka
+      - SECRET_KEY=${PLANKA_SECRET_KEY:-planka-secret-key}
+      - LOG_LEVEL=debug
+
+      # RFC Integration
+      - RFC_ENABLED=true
+      - RFC_WEBHOOKS_ENABLED=true
+      - RFC_WEBHOOK_URL=http://code-vibes-backend:8080/api/webhook/planka
+      - RFC_WEBHOOK_SECRET=${RFC_WEBHOOK_SECRET:-rfc-webhook-secret-key}
+      - RFC_BOARD_ID=${RFC_BOARD_ID:-}
+
+      # Default admin
+      - DEFAULT_ADMIN_EMAIL=admin@planka.local
+      - DEFAULT_ADMIN_PASSWORD=admin
+      - DEFAULT_ADMIN_NAME=Admin
+      - DEFAULT_ADMIN_USERNAME=admin
+    depends_on:
+      planka-db:
+        condition: service_healthy
+    networks:
+      - planka-net
+      - integration-net
+
+  planka-db:
+    image: postgres:16-alpine
+    restart: on-failure
+    volumes:
+      - planka-db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=planka
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d planka"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - planka-net
+
+volumes:
+  code-vibes-db-data:
+  planka-db-data:
+  planka-favicons:
+  planka-user-avatars:
+  planka-background-images:
+  planka-attachments:
+
+networks:
+  code-vibes-net:
+    driver: bridge
+  planka-net:
+    driver: bridge
+  integration-net:
+    driver: bridge
+

@@ -1,0 +1,33 @@
+# Code-Vibes RFC + Planka Integration Environment Variables
+# Copy this file to .env and adjust values as needed
+
+# ==================== RFC WEBHOOK INTEGRATION ====================
+# Shared secret for webhook authentication between Planka and code-vibes
+RFC_WEBHOOK_SECRET=rfc-webhook-secret-change-me
+
+# ==================== CODE-VIBES CONFIGURATION ====================
+# Enable/disable Keycloak security (set to false for development)
+APP_SECURITY_ENABLED=false
+
+# ==================== PLANKA CONFIGURATION ====================
+# Planka secret key for session encryption
+PLANKA_SECRET_KEY=planka-secret-key-change-me
+
+# Planka API token for code-vibes to access Planka API
+# Generate this after creating a user in Planka
+PLANKA_API_TOKEN=
+
+# RFC Project and Board IDs in Planka
+# Set these after creating the RFC project and board in Planka
+PLANKA_PROJECT_ID=
+PLANKA_BOARD_ID=
+RFC_BOARD_ID=
+
+# ==================== DATABASE (for development) ====================
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+
+# ==================== KEYCLOAK ====================
+KEYCLOAK_ADMIN=admin
+KEYCLOAK_ADMIN_PASSWORD=admin
+

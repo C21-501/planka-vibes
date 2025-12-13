@@ -1,5 +1,7 @@
 # Code-Vibes RFC + Planka Integration
 # Full stack deployment for RFC workflow management
+#
+# IMPORTANT: Copy .env.example to .env and configure secrets before starting!
 
 services:
   # ==================== CODE-VIBES SERVICES ====================
@@ -17,24 +19,24 @@ services:
       
       # Database
       - SPRING_DATASOURCE_URL=jdbc:postgresql://code-vibes-db:5432/cab_db
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-postgres}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
 
       # Keycloak
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/cab-realm
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
 
-      # Security - must be lowercase for Spring to recognize
-      - APP_SECURITY_ENABLED=true
+      # Security
+      - APP_SECURITY_ENABLED=${APP_SECURITY_ENABLED:-true}
 
       # Planka Integration
-      - PLANKA_ENABLED=true
+      - PLANKA_ENABLED=${PLANKA_ENABLED:-true}
       - PLANKA_URL=http://planka:1337
-      - PLANKA_API_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImY4ODJkMmRlLTc2NGUtNDNiYi04MjE4LWZiYjliYzUyNDFmYyJ9.eyJpYXQiOjE3NjU2MzA0MTUsImV4cCI6MTc5NzE2NjQxNSwic3ViIjoiMTY2NDYwNzE4Mjg5NDY2MjY1NyJ9.E6Oxmx5Vgx7t4Z5TQTp0uhQAeE8TsX6pFkft7dw3Q1Y
-      - PLANKA_WEBHOOK_SECRET=rfc-webhook-secret-key
-      - PLANKA_PROJECT_ID=1664624802276574211
-      - PLANKA_BOARD_ID=1664624915422118917
-      - PLANKA_AUTO_SYNC=true
+      - PLANKA_API_TOKEN=${PLANKA_API_TOKEN}
+      - PLANKA_WEBHOOK_SECRET=${PLANKA_WEBHOOK_SECRET}
+      - PLANKA_PROJECT_ID=${PLANKA_PROJECT_ID}
+      - PLANKA_BOARD_ID=${PLANKA_BOARD_ID}
+      - PLANKA_AUTO_SYNC=${PLANKA_AUTO_SYNC:-true}
     depends_on:
       code-vibes-db:
         condition: service_healthy
@@ -56,8 +58,8 @@ services:
       - code-vibes-db-data:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=cab_db
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d cab_db"]
       interval: 10s
@@ -73,8 +75,8 @@ services:
     ports:
       - "8081:8080"
     environment:
-      - KEYCLOAK_ADMIN=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
       - KC_HEALTH_ENABLED=true
     volumes:
       - ./code-vibes/deploy/keycloak:/opt/keycloak/data/import:ro
@@ -101,23 +103,23 @@ services:
       - planka-background-images:/app/public/background-images
       - planka-attachments:/app/private/attachments
     environment:
-      - BASE_URL=http://localhost:3000
+      - BASE_URL=${PLANKA_BASE_URL:-http://localhost:3000}
       - DATABASE_URL=postgresql://postgres@planka-db/planka
-      - SECRET_KEY=${PLANKA_SECRET_KEY:-planka-secret-key}
-      - LOG_LEVEL=debug
+      - SECRET_KEY=${PLANKA_SECRET_KEY}
+      - LOG_LEVEL=${PLANKA_LOG_LEVEL:-info}
 
       # RFC Integration
-      - RFC_ENABLED=true
-      - RFC_WEBHOOKS_ENABLED=true
+      - RFC_ENABLED=${RFC_ENABLED:-true}
+      - RFC_WEBHOOKS_ENABLED=${RFC_WEBHOOKS_ENABLED:-true}
       - RFC_WEBHOOK_URL=http://code-vibes-backend:8080/api/webhook/planka
-      - RFC_WEBHOOK_SECRET=${RFC_WEBHOOK_SECRET:-rfc-webhook-secret-key}
-      - RFC_BOARD_ID=${RFC_BOARD_ID:-}
+      - RFC_WEBHOOK_SECRET=${PLANKA_WEBHOOK_SECRET}
+      - RFC_BOARD_ID=${PLANKA_BOARD_ID}
 
       # Default admin
-      - DEFAULT_ADMIN_EMAIL=admin@planka.local
-      - DEFAULT_ADMIN_PASSWORD=admin
-      - DEFAULT_ADMIN_NAME=Admin
-      - DEFAULT_ADMIN_USERNAME=admin
+      - DEFAULT_ADMIN_EMAIL=${PLANKA_ADMIN_EMAIL:-admin@planka.local}
+      - DEFAULT_ADMIN_PASSWORD=${PLANKA_ADMIN_PASSWORD}
+      - DEFAULT_ADMIN_NAME=${PLANKA_ADMIN_NAME:-Admin}
+      - DEFAULT_ADMIN_USERNAME=${PLANKA_ADMIN_USERNAME:-admin}
     depends_on:
       planka-db:
         condition: service_healthy
@@ -156,4 +158,3 @@ networks:
     driver: bridge
   integration-net:
     driver: bridge
-

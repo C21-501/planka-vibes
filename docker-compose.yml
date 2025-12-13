@@ -12,6 +12,9 @@ services:
     ports:
       - "8080:8080"
     environment:
+      # Spring Profile
+      - SPRING_PROFILES_ACTIVE=docker
+      
       # Database
       - SPRING_DATASOURCE_URL=jdbc:postgresql://code-vibes-db:5432/cab_db
       - SPRING_DATASOURCE_USERNAME=postgres
@@ -21,20 +24,22 @@ services:
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/cab-realm
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
 
-      # Security
-      - APP_SECURITY_ENABLED=${APP_SECURITY_ENABLED:-false}
+      # Security - must be lowercase for Spring to recognize
+      - APP_SECURITY_ENABLED=true
 
       # Planka Integration
       - PLANKA_ENABLED=true
       - PLANKA_URL=http://planka:1337
-      - PLANKA_API_TOKEN=${PLANKA_API_TOKEN:-}
-      - PLANKA_WEBHOOK_SECRET=${RFC_WEBHOOK_SECRET:-rfc-webhook-secret-key}
-      - PLANKA_PROJECT_ID=${PLANKA_PROJECT_ID:-}
-      - PLANKA_BOARD_ID=${PLANKA_BOARD_ID:-}
+      - PLANKA_API_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImY4ODJkMmRlLTc2NGUtNDNiYi04MjE4LWZiYjliYzUyNDFmYyJ9.eyJpYXQiOjE3NjU2MzA0MTUsImV4cCI6MTc5NzE2NjQxNSwic3ViIjoiMTY2NDYwNzE4Mjg5NDY2MjY1NyJ9.E6Oxmx5Vgx7t4Z5TQTp0uhQAeE8TsX6pFkft7dw3Q1Y
+      - PLANKA_WEBHOOK_SECRET=rfc-webhook-secret-key
+      - PLANKA_PROJECT_ID=1664624802276574211
+      - PLANKA_BOARD_ID=1664624915422118917
       - PLANKA_AUTO_SYNC=true
     depends_on:
       code-vibes-db:
         condition: service_healthy
+      keycloak:
+        condition: service_started
     networks:
       - code-vibes-net
       - integration-net
@@ -72,7 +77,7 @@ services:
       - KEYCLOAK_ADMIN_PASSWORD=admin
       - KC_HEALTH_ENABLED=true
     volumes:
-      - ./code-vibes/backend/rfc-service/src/main/resources/keycloak:/opt/keycloak/data/import:ro
+      - ./code-vibes/deploy/keycloak:/opt/keycloak/data/import:ro
     networks:
       - code-vibes-net
     healthcheck:

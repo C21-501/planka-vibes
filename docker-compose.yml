@@ -51,6 +51,24 @@ services:
       timeout: 10s
       retries: 5
 
+  code-vibes-frontend:
+    build:
+      context: ./code-vibes/frontend
+      dockerfile: Dockerfile
+    restart: on-failure
+    ports:
+      - "5173:80"
+    environment:
+      - VITE_API_URL=/api
+      - VITE_KEYCLOAK_URL=http://localhost:8081
+      - VITE_KEYCLOAK_REALM=cab-realm
+      - VITE_KEYCLOAK_CLIENT_ID=cab-frontend
+    depends_on:
+      - code-vibes-backend
+      - keycloak
+    networks:
+      - code-vibes-net
+
   code-vibes-db:
     image: postgres:16-alpine
     restart: on-failure

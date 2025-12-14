@@ -99,9 +99,28 @@ RFC (Request for Change) Management System integrated with Planka Kanban Board.
 
 | Service | Username | Password |
 |---------|----------|----------|
-| Keycloak Admin | admin | (from .env) |
-| RFC System | admin | admin |
-| Planka | admin | (from .env) |
+| Keycloak Admin | admin | (from .env: KEYCLOAK_ADMIN_PASSWORD) |
+| RFC System | admin | admin (synced from Keycloak) |
+| Planka | admin | (from .env: PLANKA_ADMIN_PASSWORD) |
+
+## First Start Checklist
+
+After `docker compose up -d`:
+
+1. **Verify all services are running:**
+   ```bash
+   docker compose ps
+   # All services should show "healthy" or "Up"
+   ```
+
+2. **Login to Planka** at http://localhost:3000 with `admin` / `admin`
+
+3. **Login to RFC System** at http://localhost:5173 with `admin` / `admin`
+   
+   > First login may show "User not found" error - this is expected.
+   > The user will be auto-created on first successful login.
+
+4. **Configure integration** (see Quick Start step 5)
 
 ## Environment Variables
 

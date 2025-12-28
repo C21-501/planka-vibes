@@ -1,33 +1,85 @@
-# Code-Vibes RFC + Planka Integration Environment Variables
-# Copy this file to .env and adjust values as needed
+# ==================== CODE-VIBES + PLANKA INTEGRATION ====================
+# Пример конфигурации для интеграции RFC и Planka
+# 
+# Скопируйте этот файл в .env и настройте значения
+# cp integration-env.example .env
+#
+# После настройки запустите: docker compose up -d --build
 
-# ==================== RFC WEBHOOK INTEGRATION ====================
-# Shared secret for webhook authentication between Planka and code-vibes
-RFC_WEBHOOK_SECRET=rfc-webhook-secret-change-me
+# ==================== DATABASE ====================
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres123  # ИЗМЕНИТЕ на продакшене!
 
-# ==================== CODE-VIBES CONFIGURATION ====================
-# Enable/disable Keycloak security (set to false for development)
-APP_SECURITY_ENABLED=false
+# ==================== KEYCLOAK ====================
+KEYCLOAK_ADMIN=admin
+KEYCLOAK_ADMIN_PASSWORD=admin123  # ИЗМЕНИТЕ на продакшене!
 
-# ==================== PLANKA CONFIGURATION ====================
-# Planka secret key for session encryption
-PLANKA_SECRET_KEY=planka-secret-key-change-me
+# ==================== RFC SECURITY ====================
+# Включить/выключить аутентификацию в RFC сервисе
+APP_SECURITY_ENABLED=true
 
-# Planka API token for code-vibes to access Planka API
-# Generate this after creating a user in Planka
+# ==================== PLANKA CORE ====================
+# Секретный ключ для сессий Planka (сгенерируйте: openssl rand -hex 32)
+PLANKA_SECRET_KEY=ИЗМЕНИТЕ_НА_СЛУЧАЙНУЮ_СТРОКУ
+
+PLANKA_BASE_URL=http://localhost:3000
+PLANKA_LOG_LEVEL=info
+
+# Локальный админ Planka
+# ВАЖНО: используйте admin_local чтобы не конфликтовать с Keycloak admin
+PLANKA_ADMIN_EMAIL=admin_local@planka.local
+PLANKA_ADMIN_PASSWORD=admin123
+PLANKA_ADMIN_NAME=Admin Local
+PLANKA_ADMIN_USERNAME=admin_local
+
+# ==================== RFC <-> PLANKA INTEGRATION ====================
+# Включение интеграции между сервисами
+PLANKA_ENABLED=true
+RFC_ENABLED=true
+RFC_WEBHOOKS_ENABLED=true
+
+# API токен для доступа RFC сервиса к Planka API
+# Получите токен через UI Planka:
+#   1. Войдите как admin_local в http://localhost:3000
+#   2. Administration -> Users -> rfc_system -> Generate API Key
+# Или используйте скрипт: ./scripts/setup-planka-board.sh
 PLANKA_API_TOKEN=
 
-# RFC Project and Board IDs in Planka
-# Set these after creating the RFC project and board in Planka
+# Секрет для проверки webhook запросов (сгенерируйте: openssl rand -hex 16)
+PLANKA_WEBHOOK_SECRET=
+
+# IDs проекта и доски RFC в Planka
+# Получите после создания проекта и доски в Planka
+# Или используйте скрипт: ./scripts/setup-planka-board.sh
 PLANKA_PROJECT_ID=
 PLANKA_BOARD_ID=
 RFC_BOARD_ID=
 
-# ==================== DATABASE (for development) ====================
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
+# Автоматическая синхронизация RFC с Planka
+PLANKA_AUTO_SYNC=true
 
-# ==================== KEYCLOAK ====================
-KEYCLOAK_ADMIN=admin
-KEYCLOAK_ADMIN_PASSWORD=admin
+# Автоматическое создание пользователей в Planka при регистрации в RFC
+PLANKA_USER_SYNC=true
 
+# ==================== OIDC/SSO ====================
+# Принудительный SSO через Keycloak (отключает локальную авторизацию в Planka)
+OIDC_ENFORCED=false
+
+# ==================== SERVICE ACCOUNTS ====================
+# Системный аккаунт RFC для интеграции
+# Этот пользователь должен существовать в:
+#   - Keycloak (с ролью ADMIN)
+#   - Planka (с ролью admin)
+#   - RFC Database (с ролью ADMIN)
+RFC_SYSTEM_USERNAME=rfc_system
+RFC_SYSTEM_PASSWORD=rfc_system_secret_123
+RFC_SYSTEM_EMAIL=rfc_system@example.com
+
+# ==================== MAPPING СТАТУСОВ ====================
+# Названия списков в Planka для маппинга статусов RFC
+# (опционально, используются значения по умолчанию)
+# PLANKA_LIST_NAME_NEW=Новый
+# PLANKA_LIST_NAME_UNDER_REVIEW=На рассмотрении
+# PLANKA_LIST_NAME_APPROVED=Одобрен
+# PLANKA_LIST_NAME_IMPLEMENTED=Внедрен
+# PLANKA_LIST_NAME_REJECTED=Отклонен

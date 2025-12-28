@@ -23,7 +23,10 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
 
       # Keycloak
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/cab-realm
+      # Use JWK Set URI directly to avoid issuer discovery issues
+      # issuer-uri must match the issuer in JWT tokens from browser login
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8081/realms/cab-realm
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/cab-realm/protocol/openid-connect/certs
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
 
       # Security
@@ -37,6 +40,10 @@ services:
       - PLANKA_PROJECT_ID=${PLANKA_PROJECT_ID}
       - PLANKA_BOARD_ID=${PLANKA_BOARD_ID}
       - PLANKA_AUTO_SYNC=${PLANKA_AUTO_SYNC:-true}
+      - PLANKA_USER_SYNC=${PLANKA_USER_SYNC:-true}
+    extra_hosts:
+      # Allow backend to reach localhost:8081 (Keycloak) from inside container
+      - "localhost:host-gateway"
     depends_on:
       code-vibes-db:
         condition: service_healthy
@@ -96,10 +103,16 @@ services:
       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
       - KC_HEALTH_ENABLED=true
+      # Fixed hostname for browser access - Keycloak will always return localhost:8081 URLs
+      - KC_HOSTNAME=localhost
+      - KC_HOSTNAME_PORT=8081
+      - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_STRICT_HTTPS=false
     volumes:
       - ./code-vibes/deploy/keycloak:/opt/keycloak/data/import:ro
     networks:
       - code-vibes-net
+      - integration-net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
       interval: 30s
@@ -133,17 +146,41 @@ services:
       - RFC_WEBHOOK_SECRET=${PLANKA_WEBHOOK_SECRET}
       - RFC_BOARD_ID=${PLANKA_BOARD_ID}
 
-      # Default admin
-      - DEFAULT_ADMIN_EMAIL=${PLANKA_ADMIN_EMAIL:-admin@planka.local}
+      # OIDC/Keycloak SSO Integration
+      # Use localhost:8081 for browser URLs, internal network uses host.docker.internal
+      - OIDC_ISSUER=http://localhost:8081/realms/cab-realm
+      - OIDC_CLIENT_ID=planka
+      - OIDC_CLIENT_SECRET=planka-client-secret-123
+      - OIDC_SCOPES=openid email profile
+      - OIDC_CLAIMS_SOURCE=userinfo
+      - OIDC_EMAIL_ATTRIBUTE=email
+      - OIDC_NAME_ATTRIBUTE=name
+      - OIDC_USERNAME_ATTRIBUTE=preferred_username
+      - OIDC_ROLES_ATTRIBUTE=groups
+      # Role mapping: Keycloak roles -> Planka roles
+      - OIDC_ADMIN_ROLES=ADMIN
+      - OIDC_PROJECT_OWNER_ROLES=CAB_MANAGER,RFC_APPROVER
+      - OIDC_BOARD_USER_ROLES=USER
+      - OIDC_ENFORCED=${OIDC_ENFORCED:-false}
+
+      # Default admin (fallback when OIDC is not enforced)
+      # Use admin_local to avoid conflict with Keycloak admin user
+      - DEFAULT_ADMIN_EMAIL=${PLANKA_ADMIN_EMAIL:-admin_local@example.com}
       - DEFAULT_ADMIN_PASSWORD=${PLANKA_ADMIN_PASSWORD}
-      - DEFAULT_ADMIN_NAME=${PLANKA_ADMIN_NAME:-Admin}
-      - DEFAULT_ADMIN_USERNAME=${PLANKA_ADMIN_USERNAME:-admin}
+      - DEFAULT_ADMIN_NAME=${PLANKA_ADMIN_NAME:-Admin Local}
+      - DEFAULT_ADMIN_USERNAME=${PLANKA_ADMIN_USERNAME:-admin_local}
+    extra_hosts:
+      # Allow Planka to reach localhost:8081 (Keycloak) from inside container
+      - "localhost:host-gateway"
     depends_on:
       planka-db:
         condition: service_healthy
+      keycloak:
+        condition: service_started
     networks:
       - planka-net
       - integration-net
+      - code-vibes-net
 
   planka-db:
     image: postgres:16-alpine
